@@ -25,6 +25,8 @@ class SessionOutcome(StrEnum):
     HANDED_OFF = "handed_off"
     EMERGENCY = "emergency"
     ABANDONED = "abandoned"
+    FAILED_INTERACTION = "failed_interaction"
+    CALLER_CANCELLED = "caller_cancelled"
 
 
 class CreateSessionRequest(BaseModel):

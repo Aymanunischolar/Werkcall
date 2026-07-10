@@ -1,15 +1,16 @@
 import { useState } from "react";
+import type { SessionDetail } from "../types";
 
 /**
- * Trace viewer (blueprint §5, §13): fetch GET /api/sessions/{id} and show
+ * Trace viewer (detailed spec §5): fetch GET /api/sessions/{id} and show
  * transcript, tool calls, latency and outcome for recruiter inspection.
  */
 export default function SessionTrace() {
   const [sessionId, setSessionId] = useState("");
-  const [detail, setDetail] = useState(null);
-  const [error, setError] = useState(null);
+  const [detail, setDetail] = useState<SessionDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const lookup = async (e) => {
+  const lookup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setDetail(null);
@@ -18,7 +19,7 @@ export default function SessionTrace() {
       if (!res.ok) throw new Error(`session not found (${res.status})`);
       setDetail(await res.json());
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
 

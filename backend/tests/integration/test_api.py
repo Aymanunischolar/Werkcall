@@ -31,7 +31,7 @@ def test_create_session_with_consent():
 def test_check_slots_endpoint():
     res = client.post(
         "/api/tools/check-slots",
-        json={"service": "heating_failure", "earliest_date": "2026-07-13", "latest_date": "2026-07-20", "postcode": "10115"},
+        json={"service": "heating_repair", "earliest_date": "2026-07-13", "latest_date": "2026-07-20", "postcode": "10115"},
     )
     assert res.status_code == 200
     assert res.json()["result_code"] in ("OK", "NOT_FOUND")

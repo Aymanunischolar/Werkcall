@@ -1,18 +1,19 @@
 import { useState } from "react";
+import type { EvaluationRunSummary } from "../types";
 
 /**
- * Runs POST /api/evals/run and displays the measured completion rate
- * (blueprint §9) — this is what turns the CV bullet from a claim into a
- * committed, reproducible measurement.
+ * Runs POST /api/evaluations/run and displays the measured completion rate
+ * (detailed spec §17) — this is what turns the CV bullet from a claim into
+ * a committed, reproducible measurement.
  */
 export default function EvalDashboard() {
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<EvaluationRunSummary | null>(null);
 
   const run = async () => {
     setRunning(true);
     try {
-      const res = await fetch("/api/evals/run", { method: "POST" });
+      const res = await fetch("/api/evaluations/run", { method: "POST" });
       setResult(await res.json());
     } finally {
       setRunning(false);
@@ -32,6 +33,7 @@ export default function EvalDashboard() {
               {result.passed}/{result.scenario_count} passed ({Math.round(result.completion_rate * 100)}%)
             </span>
             <span className="badge">Model: {result.model}</span>
+            <span className="badge">Run id: {result.run_id.slice(0, 8)}</span>
             <span className="badge">Run at: {result.date}</span>
           </div>
           <table className="dashboard-table">

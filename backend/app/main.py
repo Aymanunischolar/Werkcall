@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import evals, sessions, tools
+from app.api import evaluations, sessions, tools
 from app.config import get_settings
 
 logging.basicConfig(level=get_settings().log_level)
@@ -46,7 +46,7 @@ async def rate_limit_middleware(request: Request, call_next):
 
 app.include_router(sessions.router)
 app.include_router(tools.router)
-app.include_router(evals.router)
+app.include_router(evaluations.router)
 
 
 @app.get("/health")
