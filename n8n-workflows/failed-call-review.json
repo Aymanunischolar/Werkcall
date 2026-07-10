@@ -13,37 +13,47 @@
       "name": "Webhook: tool failure / low confidence",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300],
+      "position": [200, 300],
       "webhookId": "failed-call-review"
+    },
+    {
+      "parameters": {
+        "jsCode": "const FAILURE_CLASSES = {\n  calendar_error: 'high',\n  crm_error: 'medium',\n  email_error: 'low',\n  auth_failure: 'high',\n  invalid_tool_call: 'medium',\n  low_confidence: 'medium',\n  emergency: 'critical',\n  explicit_request: 'low',\n  repeated_tool_failure: 'high',\n};\nconst reason = $input.first().json.reason || 'unknown';\nconst priority = FAILURE_CLASSES[reason] || 'medium';\nreturn [{ json: { ...$input.first().json, failure_class: reason, priority } }];"
+      },
+      "id": "3a1b1c1d-0005-4a1a-8a1a-000000000005",
+      "name": "Classify failure and set priority",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
     },
     {
       "parameters": {
         "resource": "ticket",
         "operation": "create",
         "additionalFields": {
-          "content": "=Review needed. Session {{$json.session_id}}. Reason: {{$json.reason}}. Trace id: {{$json.trace_id}}"
+          "content": "=Review needed. Session {{$json.session_id}}. Class: {{$json.failure_class}} (priority: {{$json.priority}}). Trace id: {{$json.trace_id}}"
         }
       },
       "id": "3a1b1c1d-0002-4a1a-8a1a-000000000002",
       "name": "HubSpot: create review item",
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2,
-      "position": [460, 300],
+      "position": [640, 300],
       "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
     },
     {
       "parameters": {
         "sendTo": "={{$env.DEMO_OPERATOR_EMAIL}}",
-        "subject": "=WerkCall AI: review needed for session {{$json.session_id}}",
+        "subject": "=WerkCall AI: [{{$json.priority}}] review needed for session {{$json.session_id}}",
         "emailType": "text",
-        "message": "=Reason: {{$json.reason}}\nTrace id: {{$json.trace_id}}\nSession: {{$json.session_id}}",
+        "message": "=Failure class: {{$json.failure_class}}\nPriority: {{$json.priority}}\nTrace id: {{$json.trace_id}}\nSession: {{$json.session_id}}",
         "options": {}
       },
       "id": "3a1b1c1d-0003-4a1a-8a1a-000000000003",
       "name": "Gmail: notify demo operator",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [680, 300],
+      "position": [860, 300],
       "credentials": { "gmailOAuth2": { "id": "demo-gmail", "name": "WerkCall Demo Gmail" } }
     },
     {
@@ -56,8 +66,8 @@
         "bodyParameters": {
           "parameters": [
             { "name": "session_id", "value": "={{$json.session_id}}" },
-            { "name": "reason", "value": "={{$json.reason}}" },
-            { "name": "urgency", "value": "={{$json.urgency}}" }
+            { "name": "reason", "value": "={{$json.failure_class}}" },
+            { "name": "urgency", "value": "={{$json.priority}}" }
           ]
         },
         "options": {}
@@ -66,20 +76,39 @@
       "name": "Preserve trace id",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300],
+      "position": [1080, 300],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/voice_sessions?id=eq.{{$json.session_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "outcome", "value": "={{$json.failure_class === 'emergency' ? 'emergency' : 'handed_off'}}" }] },
+        "options": {}
+      },
+      "id": "3a1b1c1d-0006-4a1a-8a1a-000000000006",
+      "name": "Update session status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
       "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
     }
   ],
   "connections": {
-    "Webhook: tool failure / low confidence": { "main": [[{ "node": "HubSpot: create review item", "type": "main", "index": 0 }]] },
+    "Webhook: tool failure / low confidence": { "main": [[{ "node": "Classify failure and set priority", "type": "main", "index": 0 }]] },
+    "Classify failure and set priority": { "main": [[{ "node": "HubSpot: create review item", "type": "main", "index": 0 }]] },
     "HubSpot: create review item": { "main": [[{ "node": "Gmail: notify demo operator", "type": "main", "index": 0 }]] },
-    "Gmail: notify demo operator": { "main": [[{ "node": "Preserve trace id", "type": "main", "index": 0 }]] }
+    "Gmail: notify demo operator": { "main": [[{ "node": "Preserve trace id", "type": "main", "index": 0 }]] },
+    "Preserve trace id": { "main": [[{ "node": "Update session status", "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "1",
+  "versionId": "2",
   "id": "failed-call-review",
   "meta": {
-    "description": "Triggered on tool failure or a low-confidence outcome (blueprint §6 Handoff policy, §8). Creates a HubSpot review item, emails the demo operator, and preserves the trace id in Supabase so the failure can be replayed."
+    "description": "Triggered on tool failure or a low-confidence outcome (detailed spec §9). Classifies the failure (calendar/CRM/email/auth/invalid-tool-call/low-confidence/emergency/explicit-request/repeated-failure) and sets a priority, creates a HubSpot review item, emails the demo operator, preserves the trace id in Supabase as a handoff record, and updates the session's outcome."
   }
 }
