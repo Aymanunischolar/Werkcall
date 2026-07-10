@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from datetime import date, timedelta
 from typing import Any, AsyncIterator
 from uuid import uuid4
 
@@ -76,7 +77,19 @@ class MockVoiceProvider:
             return
 
         if "termin" in lowered or "appointment" in lowered or "heizung" in lowered or "heating" in lowered:
-            await self._emit_tool_call("check_slots", {})
+            # A real model fills these from the conversation (address/postcode
+            # collected in COLLECT_DETAILS); the mock provider uses synthetic
+            # demo values so the golden-path flow is drivable end to end.
+            tomorrow = date.today() + timedelta(days=1)
+            await self._emit_tool_call(
+                "check_slots",
+                {
+                    "service": "heating_failure",
+                    "earliest_date": tomorrow.isoformat(),
+                    "latest_date": (tomorrow + timedelta(days=3)).isoformat(),
+                    "postcode": "10115",
+                },
+            )
             return
 
         await self._queue.put(ModelEvent(type=ModelEventType.FINAL_TRANSCRIPT, text=f"echo: {text}"))
