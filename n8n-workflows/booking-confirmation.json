@@ -13,19 +13,26 @@
       "name": "Webhook: booking confirmed",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300],
+      "position": [200, 300],
       "webhookId": "booking-confirmation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SIGNING_SECRET;\nconst timestamp = $input.first().json.headers['x-werkcall-timestamp'];\nconst signature = $input.first().json.headers['x-werkcall-signature'];\nconst rawBody = JSON.stringify($input.first().json.body);\nconst expected = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');\nconst freshEnough = Math.abs(Date.now() / 1000 - Number(timestamp)) < 300;\nreturn [{ json: { ...$input.first().json.body, _signatureValid: signature === expected && freshEnough } }];"
+      },
+      "id": "1a1b1c1d-0006-4a1a-8a1a-000000000006",
+      "name": "Verify signature and timestamp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
     },
     {
       "parameters": {
         "conditions": {
           "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
           "conditions": [
-            {
-              "leftValue": "={{$json.booking_id}}",
-              "rightValue": "",
-              "operator": { "type": "string", "operation": "notEmpty" }
-            }
+            { "leftValue": "={{$json._signatureValid}}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } },
+            { "leftValue": "={{$json.booking_id}}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty" } }
           ],
           "combinator": "and"
         }
@@ -34,7 +41,43 @@
       "name": "Validate payload",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/tool_executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "idempotency_key", "value": "=eq.{{$json.idempotency_key}}" },
+            { "name": "tool", "value": "eq.booking_confirmation_email" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0007-4a1a-8a1a-000000000007",
+      "name": "Check idempotency record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 220],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{$json.length}}", "rightValue": 0, "operator": { "type": "number", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "1a1b1c1d-0008-4a1a-8a1a-000000000008",
+      "name": "Already sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 220]
     },
     {
       "parameters": {
@@ -48,7 +91,8 @@
       "name": "Gmail: send confirmation",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [700, 220],
+      "position": [1300, 160],
+      "onError": "continueErrorOutput",
       "credentials": { "gmailOAuth2": { "id": "demo-gmail", "name": "WerkCall Demo Gmail" } }
     },
     {
@@ -62,7 +106,8 @@
           "parameters": [
             { "name": "session_id", "value": "={{$json.session_id}}" },
             { "name": "tool", "value": "booking_confirmation_email" },
-            { "name": "result_code", "value": "OK" }
+            { "name": "result_code", "value": "OK" },
+            { "name": "idempotency_key", "value": "={{$json.idempotency_key}}" }
           ]
         },
         "options": {}
@@ -71,8 +116,32 @@
       "name": "Write audit status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [940, 220],
+      "position": [1520, 160],
       "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    },
+    {
+      "parameters": { "amount": 2, "unit": "seconds" },
+      "id": "1a1b1c1d-0009-4a1a-8a1a-000000000009",
+      "name": "Wait 2s before retry",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1300, 340]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.contact.email}}",
+        "subject": "Ihr Termin bei NordWerk Haustechnik ist bestätigt",
+        "emailType": "text",
+        "message": "=Hallo {{$json.contact.full_name}},\n\nIhr Termin für {{$json.service}} am {{$json.start_at}} wurde bestätigt.\nBuchungsnummer: {{$json.booking_id}}\n\nNordWerk Haustechnik GmbH",
+        "options": {}
+      },
+      "id": "1a1b1c1d-0010-4a1a-8a1a-000000000010",
+      "name": "Gmail: retry confirmation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1520, 340],
+      "onError": "continueErrorOutput",
+      "credentials": { "gmailOAuth2": { "id": "demo-gmail", "name": "WerkCall Demo Gmail" } }
     },
     {
       "parameters": {
@@ -82,7 +151,27 @@
         "bodyParameters": {
           "parameters": [
             { "name": "session_id", "value": "={{$json.session_id}}" },
-            { "name": "reason", "value": "invalid booking-confirmation payload" }
+            { "name": "reason", "value": "gmail confirmation failed after retry" },
+            { "name": "urgency", "value": "standard" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0011-4a1a-8a1a-000000000011",
+      "name": "Create manual-review item",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 340]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_WEBHOOK_BASE_URL}}/failed-call-review",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session_id", "value": "={{$json.session_id}}" },
+            { "name": "reason", "value": "invalid or unsigned booking-confirmation payload" }
           ]
         },
         "options": {}
@@ -91,24 +180,44 @@
       "name": "Error branch: notify review queue",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [700, 400]
+      "position": [640, 460]
     }
   ],
   "connections": {
-    "Webhook: booking confirmed": { "main": [[{ "node": "Validate payload", "type": "main", "index": 0 }]] },
+    "Webhook: booking confirmed": { "main": [[{ "node": "Verify signature and timestamp", "type": "main", "index": 0 }]] },
+    "Verify signature and timestamp": { "main": [[{ "node": "Validate payload", "type": "main", "index": 0 }]] },
     "Validate payload": {
       "main": [
-        [{ "node": "Gmail: send confirmation", "type": "main", "index": 0 }],
+        [{ "node": "Check idempotency record", "type": "main", "index": 0 }],
         [{ "node": "Error branch: notify review queue", "type": "main", "index": 0 }]
       ]
     },
-    "Gmail: send confirmation": { "main": [[{ "node": "Write audit status", "type": "main", "index": 0 }]] }
+    "Check idempotency record": { "main": [[{ "node": "Already sent?", "type": "main", "index": 0 }]] },
+    "Already sent?": {
+      "main": [
+        [{ "node": "Gmail: send confirmation", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Gmail: send confirmation": {
+      "main": [
+        [{ "node": "Write audit status", "type": "main", "index": 0 }],
+        [{ "node": "Wait 2s before retry", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait 2s before retry": { "main": [[{ "node": "Gmail: retry confirmation", "type": "main", "index": 0 }]] },
+    "Gmail: retry confirmation": {
+      "main": [
+        [{ "node": "Write audit status", "type": "main", "index": 0 }],
+        [{ "node": "Create manual-review item", "type": "main", "index": 0 }]
+      ]
+    }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "1",
+  "versionId": "2",
   "id": "booking-confirmation",
   "meta": {
-    "description": "Triggered by the FastAPI backend after book_appointment/reschedule_appointment succeed (blueprint §8). Validates the payload, sends a Gmail confirmation, and writes an audit record; failures route to failed-call-review instead of silently dropping."
+    "description": "Triggered by the FastAPI backend after book_appointment/reschedule_appointment succeed (detailed spec §9). Verifies the HMAC signature and timestamp, validates the payload, checks for a prior idempotent send, emails the confirmation, retries once with backoff on Gmail failure, and falls back to a manual-review item and operator notification."
   }
 }

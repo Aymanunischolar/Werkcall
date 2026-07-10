@@ -76,19 +76,42 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/bookings?session_id=eq.{{$json.session_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "hubspot_contact_id", "value": "={{$node['HubSpot: upsert contact'].json.id}}" },
+            { "name": "hubspot_ticket_id", "value": "={{$node['HubSpot: create ticket/task'].json.id}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2a1b1c1d-0006-4a1a-8a1a-000000000006",
+      "name": "Store HubSpot identifiers in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
     }
   ],
   "connections": {
     "Webhook: session completed": { "main": [[{ "node": "HubSpot: search contact", "type": "main", "index": 0 }]] },
     "HubSpot: search contact": { "main": [[{ "node": "HubSpot: upsert contact", "type": "main", "index": 0 }]] },
     "HubSpot: upsert contact": { "main": [[{ "node": "HubSpot: create ticket/task", "type": "main", "index": 0 }]] },
-    "HubSpot: create ticket/task": { "main": [[{ "node": "Attach call summary", "type": "main", "index": 0 }]] }
+    "HubSpot: create ticket/task": { "main": [[{ "node": "Attach call summary", "type": "main", "index": 0 }]] },
+    "Attach call summary": { "main": [[{ "node": "Store HubSpot identifiers in Supabase", "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "1",
+  "versionId": "2",
   "id": "crm-sync",
   "meta": {
-    "description": "Triggered when a voice session completes (blueprint §8). Upserts by email/phone hash so a repeat caller never creates a duplicate HubSpot contact, then attaches the call summary as a ticket/task."
+    "description": "Triggered when a voice session completes (detailed spec §9). Upserts by email/phone hash so a repeat caller never creates a duplicate HubSpot contact, attaches the call summary as a ticket/task, and stores the resulting HubSpot contact/ticket ids back on the booking row in Supabase."
   }
 }

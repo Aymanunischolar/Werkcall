@@ -28,6 +28,22 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "leftValue": "={{$json.follow_up_at}}", "rightValue": "", "operator": { "type": "string", "operation": "empty" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4a1b1c1d-0005-4a1a-8a1a-000000000005",
+      "name": "Filter already-contacted records",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
         "resource": "ticket",
         "operation": "create",
         "additionalFields": { "content": "=Follow up on unresolved enquiry, session {{$json.id}} started {{$json.started_at}}" }
@@ -36,7 +52,7 @@
       "name": "HubSpot: create follow-up task",
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2,
-      "position": [680, 300],
+      "position": [900, 300],
       "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
     },
     {
@@ -53,20 +69,21 @@
       "name": "Mark follow-up timestamp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300],
+      "position": [1120, 300],
       "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
     }
   ],
   "connections": {
     "Daily 08:00": { "main": [[{ "node": "Find unresolved enquiries", "type": "main", "index": 0 }]] },
-    "Find unresolved enquiries": { "main": [[{ "node": "HubSpot: create follow-up task", "type": "main", "index": 0 }]] },
+    "Find unresolved enquiries": { "main": [[{ "node": "Filter already-contacted records", "type": "main", "index": 0 }]] },
+    "Filter already-contacted records": { "main": [[{ "node": "HubSpot: create follow-up task", "type": "main", "index": 0 }]] },
     "HubSpot: create follow-up task": { "main": [[{ "node": "Mark follow-up timestamp", "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "1",
+  "versionId": "2",
   "id": "follow-up-reminder",
   "meta": {
-    "description": "Scheduled daily (blueprint §8). Finds sessions still in_progress, creates a HubSpot follow-up task per enquiry, and marks a follow-up timestamp so the same session isn't re-queued every day."
+    "description": "Scheduled daily (detailed spec §9). Finds sessions still in_progress, filters out any that already have a follow_up_at timestamp so the same enquiry isn't re-queued every day, creates a HubSpot follow-up task per remaining enquiry, and marks the follow-up timestamp."
   }
 }
