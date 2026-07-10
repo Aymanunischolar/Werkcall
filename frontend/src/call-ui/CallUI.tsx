@@ -1,9 +1,10 @@
 import { useState } from "react";
-import ConsentModal from "./ConsentModal.jsx";
-import { useVoiceSession } from "./useVoiceSession.js";
+import ConsentModal from "./ConsentModal.tsx";
+import { useVoiceSession } from "./useVoiceSession.ts";
+import type { Language } from "../types";
 
 export default function CallUI() {
-  const [language, setLanguage] = useState("de");
+  const [language, setLanguage] = useState<Language>("de");
   const [consented, setConsented] = useState(false);
   const [draft, setDraft] = useState("");
   const { sessionId, state, turns, connected, micActive, startSession, sendText, startMic, stopMic, endSession } =
@@ -14,7 +15,7 @@ export default function CallUI() {
     await startSession({ language });
   };
 
-  const handleSend = (e) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
     sendText(draft.trim());

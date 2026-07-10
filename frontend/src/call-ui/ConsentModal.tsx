@@ -1,4 +1,12 @@
-export default function ConsentModal({ language, onLanguageChange, onAccept }) {
+import type { Language } from "../types";
+
+interface ConsentModalProps {
+  language: Language;
+  onLanguageChange: (language: Language) => void;
+  onAccept: () => void;
+}
+
+export default function ConsentModal({ language, onLanguageChange, onAccept }: ConsentModalProps) {
   return (
     <div className="consent-overlay">
       <div className="consent-card">
@@ -11,7 +19,7 @@ export default function ConsentModal({ language, onLanguageChange, onAccept }) {
         </p>
         <label className="muted">
           Language:{" "}
-          <select value={language} onChange={(e) => onLanguageChange(e.target.value)}>
+          <select value={language} onChange={(e) => onLanguageChange(e.target.value as Language)}>
             <option value="de">Deutsch</option>
             <option value="en">English</option>
           </select>

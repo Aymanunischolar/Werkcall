@@ -46,7 +46,7 @@ class SearchFaqOutput(BaseModel):
 # ---- check_slots -----------------------------------------------------------
 
 class ServiceType(StrEnum):
-    HEATING_FAILURE = "heating_failure"
+    HEATING_REPAIR = "heating_repair"
     MAINTENANCE = "maintenance"
     INSTALLATION_ENQUIRY = "installation_enquiry"
 
@@ -85,12 +85,24 @@ class CheckSlotsOutput(BaseModel):
 
 # ---- book_appointment -------------------------------------------------------
 
+class Address(BaseModel):
+    street: str = Field(min_length=1, max_length=200)
+    postcode: str
+    city: str = Field(min_length=1, max_length=120)
+
+    @field_validator("postcode")
+    @classmethod
+    def validate_postcode(cls, v: str) -> str:
+        if not GERMAN_POSTCODE_RE.match(v):
+            raise ValueError("postcode must be a 5-digit German Postleitzahl")
+        return v
+
+
 class ContactDetails(BaseModel):
     full_name: str = Field(min_length=1, max_length=200)
     phone: str
     email: EmailStr | None = None
-    address: str = Field(min_length=1, max_length=300)
-    postcode: str
+    address: Address
 
     @field_validator("phone")
     @classmethod
@@ -99,13 +111,6 @@ class ContactDetails(BaseModel):
         if not E164_RE.match(cleaned):
             raise ValueError("phone must be a valid E.164-ish number")
         return cleaned
-
-    @field_validator("postcode")
-    @classmethod
-    def validate_postcode(cls, v: str) -> str:
-        if not GERMAN_POSTCODE_RE.match(v):
-            raise ValueError("postcode must be a 5-digit German Postleitzahl")
-        return v
 
 
 class BookAppointmentInput(BaseModel):

@@ -1,9 +1,15 @@
-import { useState } from "react";
-import CallUI from "./call-ui/CallUI.jsx";
-import SessionTrace from "./trace-viewer/SessionTrace.jsx";
-import EvalDashboard from "./dashboard/EvalDashboard.jsx";
+import { useState, type ComponentType } from "react";
+import CallUI from "./call-ui/CallUI.tsx";
+import SessionTrace from "./trace-viewer/SessionTrace.tsx";
+import EvalDashboard from "./dashboard/EvalDashboard.tsx";
 
-const TABS = [
+interface Tab {
+  id: string;
+  label: string;
+  component: ComponentType;
+}
+
+const TABS: Tab[] = [
   { id: "call", label: "Browser call demo", component: CallUI },
   { id: "trace", label: "Session trace", component: SessionTrace },
   { id: "evals", label: "Evaluation results", component: EvalDashboard },
@@ -11,7 +17,7 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState("call");
-  const Active = TABS.find((t) => t.id === tab).component;
+  const Active = TABS.find((t) => t.id === tab)!.component;
 
   return (
     <div className="app-shell">

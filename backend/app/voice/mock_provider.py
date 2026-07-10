@@ -84,7 +84,7 @@ class MockVoiceProvider:
             await self._emit_tool_call(
                 "check_slots",
                 {
-                    "service": "heating_failure",
+                    "service": "heating_repair",
                     "earliest_date": tomorrow.isoformat(),
                     "latest_date": (tomorrow + timedelta(days=3)).isoformat(),
                     "postcode": "10115",

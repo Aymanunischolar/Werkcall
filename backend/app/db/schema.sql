@@ -54,12 +54,14 @@ create table if not exists bookings (
 );
 
 create table if not exists handoffs (
-    id           uuid primary key default gen_random_uuid(),
-    session_id   uuid not null references voice_sessions(id) on delete cascade,
-    reason       text not null,
-    urgency      text not null,
-    ticket_id    text,
-    created_at   timestamptz not null default now()
+    id                 uuid primary key default gen_random_uuid(),
+    session_id         uuid not null references voice_sessions(id) on delete cascade,
+    reason             text not null,
+    urgency            text not null,
+    ticket_id          text,
+    resolution_status  text not null default 'open'
+                         check (resolution_status in ('open','in_progress','resolved','closed')),
+    created_at         timestamptz not null default now()
 );
 
 create table if not exists evaluation_runs (
