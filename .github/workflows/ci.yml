@@ -33,3 +33,36 @@ jobs:
           node-version: "20"
       - run: npm install
       - run: npm run build
+
+  n8n-node-package:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/n8n-nodes-werkcall
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  community-node-reviewer:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/community-node-reviewer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+      - name: Review the WerkCall n8n node package (self-check, non-blocking)
+        run: node dist/cli.js ../../packages/n8n-nodes-werkcall --format markdown
+        continue-on-error: true

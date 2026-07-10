@@ -1,0 +1,22 @@
+# Default owner for everything not matched below.
+*                                   @ayman
+
+# Backend voice gateway, policies, tool router, evals
+/backend/                          @ayman
+
+# Frontend browser call UI, dashboard, trace viewer
+/frontend/                         @ayman
+
+# Custom n8n node package
+/packages/n8n-nodes-werkcall/      @ayman
+
+# Community node reviewer CLI
+/tools/community-node-reviewer/    @ayman
+
+# n8n workflow exports — changes here should be re-imported and re-tested in n8n before merge
+/n8n-workflows/                    @ayman
+
+# Security-sensitive files require extra scrutiny
+/SECURITY.md                       @ayman
+/.env.example                      @ayman
+/docker-compose.yml                @ayman
