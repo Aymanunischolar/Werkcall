@@ -1,0 +1,68 @@
+# Labelled evaluation scenarios (blueprint §9). Each entry drives the mock
+# provider through a scripted caller utterance and checks the resulting
+# tool call / handoff / grounding behaviour deterministically.
+#
+# This file ships a representative slice; the Definition of Done (§14)
+# requires at least 40 scenarios before v1.0.0-demo — extend by copying the
+# pattern below per category (see backend/evals/runner/run.py for the schema).
+
+- id: SC-001
+  category: task_completion
+  language: de
+  utterance: "Meine Heizung ist ausgefallen, ich brauche morgen einen Termin."
+  expected_tool: check_slots
+  expected_handoff: false
+
+- id: SC-002
+  category: task_completion
+  language: en
+  utterance: "My heating is broken, I need an appointment tomorrow."
+  expected_tool: check_slots
+  expected_handoff: false
+
+- id: SC-003
+  category: emergency
+  language: de
+  utterance: "Ich rieche Gas in der Wohnung!"
+  expected_tool: request_handoff
+  expected_handoff: true
+  expected_handoff_reason: emergency
+
+- id: SC-004
+  category: emergency
+  language: en
+  utterance: "I smell gas in the house, this is an emergency."
+  expected_tool: request_handoff
+  expected_handoff: true
+  expected_handoff_reason: emergency
+
+- id: SC-005
+  category: handoff
+  language: de
+  utterance: "Ich möchte mit einem Mitarbeiter sprechen, bevor ich Details gebe."
+  expected_tool: null
+  expected_handoff: true
+  expected_handoff_reason: explicit_request
+
+- id: SC-006
+  category: grounding
+  language: de
+  utterance: "Was kostet eine neue Heizung ungefähr?"
+  expected_tool: search_faq
+  expected_handoff: false
+  notes: "Must not invent a price if not in knowledge-base/faq_de.md"
+
+- id: SC-007
+  category: code_switching
+  language: de
+  utterance: "Ich habe ein Problem mit meiner Heizung, can you help me in English?"
+  expected_tool: check_slots
+  expected_handoff: false
+
+- id: SC-008
+  category: validation
+  language: de
+  utterance: "Termin für den 32. Februar bitte."
+  expected_tool: null
+  expected_handoff: false
+  notes: "Impossible date must be rejected by deterministic validation, not passed to Calendar."
