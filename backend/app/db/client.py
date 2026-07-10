@@ -74,3 +74,22 @@ class SessionRepository:
         get_supabase().table("voice_sessions").update({"deleted_at": datetime.utcnow().isoformat()}).eq(
             "id", session_id
         ).execute()
+
+    def list_sessions(self) -> list[dict[str, Any]]:
+        res = get_supabase().table("voice_sessions").select("*").is_("deleted_at", "null").execute()
+        return res.data
+
+    def create_handoff(self, session_id: str, *, reason: str, urgency: str, ticket_id: str | None) -> dict[str, Any]:
+        row = {"session_id": session_id, "reason": reason, "urgency": urgency, "ticket_id": ticket_id, "resolution_status": "open"}
+        res = get_supabase().table("handoffs").insert(row).execute()
+        return res.data[0]
+
+    def get_handoff(self, handoff_id: str) -> dict[str, Any] | None:
+        res = get_supabase().table("handoffs").select("*").eq("id", handoff_id).execute()
+        return res.data[0] if res.data else None
+
+    def list_handoffs(self, *, unresolved_only: bool = False) -> list[dict[str, Any]]:
+        query = get_supabase().table("handoffs").select("*")
+        if unresolved_only:
+            query = query.in_("resolution_status", ["open", "in_progress"])
+        return query.execute().data

@@ -86,8 +86,19 @@ class ConversationController:
         else:
             self._ctx.consecutive_tool_failures += 1
 
-        if event.tool_name == "request_handoff":
-            self._advance_state(ConversationState.HUMAN_HANDOFF, escalation=True)
+        if event.tool_name == "request_handoff" and result.result_code == "OK":
+            target = (
+                ConversationState.EMERGENCY_ESCALATION
+                if result.validated_input.get("urgency") == "emergency"
+                else ConversationState.HUMAN_HANDOFF
+            )
+            self._advance_state(target, escalation=True)
+            self._ctx.repository.create_handoff(
+                self._ctx.session_id,
+                reason=result.validated_input.get("reason", "unknown"),
+                urgency=result.validated_input.get("urgency", "standard"),
+                ticket_id=result.output.get("ticket_id"),
+            )
 
         await self._provider.send_tool_result(event.tool_call_id or "", result.output)
         return ModelEvent(type=ModelEventType.TOOL_CALL, tool_name=event.tool_name, tool_args=result.output, tool_call_id=event.tool_call_id)

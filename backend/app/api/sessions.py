@@ -50,6 +50,24 @@ async def create_session(payload: CreateSessionRequest) -> CreateSessionResponse
     )
 
 
+@router.get("")
+async def list_sessions() -> list[dict]:
+    """List sessions (detailed spec §10 custom-node "list sessions" operation)."""
+    rows = get_repository().list_sessions()
+    return [
+        {
+            "session_id": row["id"],
+            "started_at": row["started_at"],
+            "language": row["language"],
+            "channel": row["channel"],
+            "outcome": row.get("outcome", SessionOutcome.IN_PROGRESS),
+            "state": row.get("state", "DISCLOSURE"),
+            "duration_ms": row.get("duration_ms"),
+        }
+        for row in rows
+    ]
+
+
 @router.get("/{session_id}", response_model=SessionDetail)
 async def get_session(session_id: str) -> SessionDetail:
     repo = get_repository()

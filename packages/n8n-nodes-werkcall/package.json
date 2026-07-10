@@ -1,0 +1,55 @@
+{
+  "name": "n8n-nodes-werkcall",
+  "version": "0.1.0",
+  "description": "n8n community node for the WerkCall AI voice-receptionist API: appointments, sessions, handoffs and evaluations.",
+  "keywords": [
+    "n8n-community-node-package",
+    "werkcall",
+    "voice-ai",
+    "appointment-booking"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/ayman/werkcall-ai",
+  "author": {
+    "name": "Ayman Rehman"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayman/werkcall-ai.git",
+    "directory": "packages/n8n-nodes-werkcall"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && cp -r nodes/WerkCall/*.json dist/nodes/WerkCall/ && cp -r icons dist/",
+    "dev": "tsc --watch",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/WerkCallApi.credentials.js",
+      "dist/credentials/WerkCallOAuth2Api.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/WerkCall/WerkCall.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.1",
+    "n8n-workflow": "^1.60.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
