@@ -16,6 +16,7 @@ class InMemoryRepository:
         self._sessions: dict[str, dict[str, Any]] = {}
         self._turns: dict[str, list[dict[str, Any]]] = {}
         self._tool_executions: dict[str, list[dict[str, Any]]] = {}
+        self._handoffs: dict[str, dict[str, Any]] = {}
 
     def create_session(self, *, language: str, channel: str, model_provider: str) -> dict[str, Any]:
         session_id = str(uuid4())
@@ -99,3 +100,29 @@ class InMemoryRepository:
     def delete_session(self, session_id: str) -> None:
         if session_id in self._sessions:
             self._sessions[session_id]["deleted_at"] = datetime.utcnow().isoformat()
+
+    def list_sessions(self) -> list[dict[str, Any]]:
+        return [row for row in self._sessions.values() if not row.get("deleted_at")]
+
+    def create_handoff(self, session_id: str, *, reason: str, urgency: str, ticket_id: str | None) -> dict[str, Any]:
+        handoff_id = str(uuid4())
+        row = {
+            "id": handoff_id,
+            "session_id": session_id,
+            "reason": reason,
+            "urgency": urgency,
+            "ticket_id": ticket_id,
+            "resolution_status": "open",
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        self._handoffs[handoff_id] = row
+        return row
+
+    def get_handoff(self, handoff_id: str) -> dict[str, Any] | None:
+        return self._handoffs.get(handoff_id)
+
+    def list_handoffs(self, *, unresolved_only: bool = False) -> list[dict[str, Any]]:
+        rows = list(self._handoffs.values())
+        if unresolved_only:
+            rows = [r for r in rows if r["resolution_status"] in ("open", "in_progress")]
+        return rows
