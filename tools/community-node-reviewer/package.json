@@ -1,0 +1,26 @@
+{
+  "name": "n8n-community-node-reviewer",
+  "version": "0.1.0",
+  "description": "Analyses an n8n community node repository (local path, GitHub PR/repo, or npm package) and produces terminal, Markdown and JSON review feedback.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "community-node-reviewer": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
