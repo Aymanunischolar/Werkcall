@@ -1,0 +1,7 @@
+{
+  "name": "bad-example-node",
+  "version": "0.0.1",
+  "dependencies": {
+    "unused-dep": "^1.0.0"
+  }
+}
