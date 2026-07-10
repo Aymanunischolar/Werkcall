@@ -1,0 +1,94 @@
+{
+  "name": "crm-sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-sync",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "2a1b1c1d-0001-4a1a-8a1a-000000000001",
+      "name": "Webhook: session completed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "crm-sync"
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "search",
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            { "filtersUi": { "filterValues": [{ "propertyName": "email", "operator": "EQ", "value": "={{$json.contact.email}}" }] } }
+          ]
+        }
+      },
+      "id": "2a1b1c1d-0002-4a1a-8a1a-000000000002",
+      "name": "HubSpot: search contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{$json.contact.email}}",
+        "additionalFields": {
+          "firstName": "={{$json.contact.full_name.split(' ')[0]}}",
+          "phone": "={{$json.contact.phone}}"
+        }
+      },
+      "id": "2a1b1c1d-0003-4a1a-8a1a-000000000003",
+      "name": "HubSpot: upsert contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "create",
+        "additionalFields": {
+          "content": "=Call summary: {{$json.summary}}\nOutcome: {{$json.outcome}}\nSession: {{$json.session_id}}"
+        }
+      },
+      "id": "2a1b1c1d-0004-4a1a-8a1a-000000000004",
+      "name": "HubSpot: create ticket/task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [{ "id": "1", "name": "attached_call_summary", "value": "={{$json.summary}}", "type": "string" }]
+        }
+      },
+      "id": "2a1b1c1d-0005-4a1a-8a1a-000000000005",
+      "name": "Attach call summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: session completed": { "main": [[{ "node": "HubSpot: search contact", "type": "main", "index": 0 }]] },
+    "HubSpot: search contact": { "main": [[{ "node": "HubSpot: upsert contact", "type": "main", "index": 0 }]] },
+    "HubSpot: upsert contact": { "main": [[{ "node": "HubSpot: create ticket/task", "type": "main", "index": 0 }]] },
+    "HubSpot: create ticket/task": { "main": [[{ "node": "Attach call summary", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "id": "crm-sync",
+  "meta": {
+    "description": "Triggered when a voice session completes (blueprint §8). Upserts by email/phone hash so a repeat caller never creates a duplicate HubSpot contact, then attaches the call summary as a ticket/task."
+  }
+}

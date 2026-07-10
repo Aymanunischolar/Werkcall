@@ -1,0 +1,85 @@
+{
+  "name": "failed-call-review",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "failed-call-review",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "3a1b1c1d-0001-4a1a-8a1a-000000000001",
+      "name": "Webhook: tool failure / low confidence",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "failed-call-review"
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "create",
+        "additionalFields": {
+          "content": "=Review needed. Session {{$json.session_id}}. Reason: {{$json.reason}}. Trace id: {{$json.trace_id}}"
+        }
+      },
+      "id": "3a1b1c1d-0002-4a1a-8a1a-000000000002",
+      "name": "HubSpot: create review item",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$env.DEMO_OPERATOR_EMAIL}}",
+        "subject": "=WerkCall AI: review needed for session {{$json.session_id}}",
+        "emailType": "text",
+        "message": "=Reason: {{$json.reason}}\nTrace id: {{$json.trace_id}}\nSession: {{$json.session_id}}",
+        "options": {}
+      },
+      "id": "3a1b1c1d-0003-4a1a-8a1a-000000000003",
+      "name": "Gmail: notify demo operator",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [680, 300],
+      "credentials": { "gmailOAuth2": { "id": "demo-gmail", "name": "WerkCall Demo Gmail" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/handoffs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session_id", "value": "={{$json.session_id}}" },
+            { "name": "reason", "value": "={{$json.reason}}" },
+            { "name": "urgency", "value": "={{$json.urgency}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3a1b1c1d-0004-4a1a-8a1a-000000000004",
+      "name": "Preserve trace id",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    }
+  ],
+  "connections": {
+    "Webhook: tool failure / low confidence": { "main": [[{ "node": "HubSpot: create review item", "type": "main", "index": 0 }]] },
+    "HubSpot: create review item": { "main": [[{ "node": "Gmail: notify demo operator", "type": "main", "index": 0 }]] },
+    "Gmail: notify demo operator": { "main": [[{ "node": "Preserve trace id", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "id": "failed-call-review",
+  "meta": {
+    "description": "Triggered on tool failure or a low-confidence outcome (blueprint §6 Handoff policy, §8). Creates a HubSpot review item, emails the demo operator, and preserves the trace id in Supabase so the failure can be replayed."
+  }
+}
