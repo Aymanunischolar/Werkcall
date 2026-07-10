@@ -1,0 +1,26 @@
+[
+  {
+    "full_name": "Lena Brandt",
+    "phone": "+4915199988771",
+    "email": "lena.brandt.demo@example.com",
+    "address": "Musterstraße 12",
+    "postcode": "10115",
+    "note": "Synthetic demo identity — heating failure scenario"
+  },
+  {
+    "full_name": "Jonas Weber",
+    "phone": "+4917612345678",
+    "email": "jonas.weber.demo@example.com",
+    "address": "Beispielweg 4",
+    "postcode": "20095",
+    "note": "Synthetic demo identity — maintenance booking scenario"
+  },
+  {
+    "full_name": "Amelia Cross",
+    "phone": "+4915234567890",
+    "email": "amelia.cross.demo@example.com",
+    "address": "Sample Allee 9",
+    "postcode": "22303",
+    "note": "Synthetic demo identity — English-language reschedule scenario"
+  }
+]

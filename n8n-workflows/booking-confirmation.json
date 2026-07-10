@@ -1,0 +1,114 @@
+{
+  "name": "booking-confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "booking-confirmation",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1a1b1c1d-0001-4a1a-8a1a-000000000001",
+      "name": "Webhook: booking confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "booking-confirmation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{$json.booking_id}}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "1a1b1c1d-0002-4a1a-8a1a-000000000002",
+      "name": "Validate payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.contact.email}}",
+        "subject": "Ihr Termin bei NordWerk Haustechnik ist bestätigt",
+        "emailType": "text",
+        "message": "=Hallo {{$json.contact.full_name}},\n\nIhr Termin für {{$json.service}} am {{$json.start_at}} wurde bestätigt.\nBuchungsnummer: {{$json.booking_id}}\n\nNordWerk Haustechnik GmbH",
+        "options": {}
+      },
+      "id": "1a1b1c1d-0003-4a1a-8a1a-000000000003",
+      "name": "Gmail: send confirmation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [700, 220],
+      "credentials": { "gmailOAuth2": { "id": "demo-gmail", "name": "WerkCall Demo Gmail" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/tool_executions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session_id", "value": "={{$json.session_id}}" },
+            { "name": "tool", "value": "booking_confirmation_email" },
+            { "name": "result_code", "value": "OK" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0004-4a1a-8a1a-000000000004",
+      "name": "Write audit status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 220],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.N8N_WEBHOOK_BASE_URL}}/failed-call-review",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session_id", "value": "={{$json.session_id}}" },
+            { "name": "reason", "value": "invalid booking-confirmation payload" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1a1b1c1d-0005-4a1a-8a1a-000000000005",
+      "name": "Error branch: notify review queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 400]
+    }
+  ],
+  "connections": {
+    "Webhook: booking confirmed": { "main": [[{ "node": "Validate payload", "type": "main", "index": 0 }]] },
+    "Validate payload": {
+      "main": [
+        [{ "node": "Gmail: send confirmation", "type": "main", "index": 0 }],
+        [{ "node": "Error branch: notify review queue", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gmail: send confirmation": { "main": [[{ "node": "Write audit status", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "id": "booking-confirmation",
+  "meta": {
+    "description": "Triggered by the FastAPI backend after book_appointment/reschedule_appointment succeed (blueprint §8). Validates the payload, sends a Gmail confirmation, and writes an audit record; failures route to failed-call-review instead of silently dropping."
+  }
+}

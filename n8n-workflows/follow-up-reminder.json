@@ -1,0 +1,72 @@
+{
+  "name": "follow-up-reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+      },
+      "id": "4a1b1c1d-0001-4a1a-8a1a-000000000001",
+      "name": "Daily 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/voice_sessions?outcome=eq.in_progress&select=id,started_at",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "4a1b1c1d-0002-4a1a-8a1a-000000000002",
+      "name": "Find unresolved enquiries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "operation": "create",
+        "additionalFields": { "content": "=Follow up on unresolved enquiry, session {{$json.id}} started {{$json.started_at}}" }
+      },
+      "id": "4a1b1c1d-0003-4a1a-8a1a-000000000003",
+      "name": "HubSpot: create follow-up task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": { "hubspotApi": { "id": "demo-hubspot", "name": "WerkCall Demo HubSpot" } }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/voice_sessions?id=eq.{{$json.id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "follow_up_at", "value": "={{$now.toISO()}}" }] },
+        "options": {}
+      },
+      "id": "4a1b1c1d-0004-4a1a-8a1a-000000000004",
+      "name": "Mark follow-up timestamp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "credentials": { "httpHeaderAuth": { "id": "demo-supabase", "name": "WerkCall Demo Supabase" } }
+    }
+  ],
+  "connections": {
+    "Daily 08:00": { "main": [[{ "node": "Find unresolved enquiries", "type": "main", "index": 0 }]] },
+    "Find unresolved enquiries": { "main": [[{ "node": "HubSpot: create follow-up task", "type": "main", "index": 0 }]] },
+    "HubSpot: create follow-up task": { "main": [[{ "node": "Mark follow-up timestamp", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "id": "follow-up-reminder",
+  "meta": {
+    "description": "Scheduled daily (blueprint §8). Finds sessions still in_progress, creates a HubSpot follow-up task per enquiry, and marks a follow-up timestamp so the same session isn't re-queued every day."
+  }
+}
